@@ -56,11 +56,12 @@ public:
     double              x_offset;
     double              y_offset;
     double              z_offset;
-    double              object_offset;
+    double              landing_threshold;
     double              pi;
     bool                emergency_landing;
     bool                inclined_landing;
     bool                landed;
+    bool                onboard_angles;
     Quaternion          quat;
 
     // Create Ivalue object which is needed as the input for loaded gpu scriptmodule
@@ -72,14 +73,25 @@ public:
     }
 
     void Check_Succesfull_Landing() {
-
-        if (abs(pos_(0)-landinggoal_pos_(0)) < 0.15 &&
-            abs(pos_(2)-landinggoal_pos_(2)) < 0.15 &&
-            abs(vel_(0)-landinggoal_pos_(0)) < 1.5 &&
-            abs(vel_(2)-landinggoal_pos_(2)) < 1.5 &&
-            abs(orient_optitrack(1)- landing_angle) < 0.05) {
+        if (!onboard_angles) {
+            if (abs(pos_(0) - landinggoal_pos_(0)) < landing_threshold &&
+                abs(pos_(2) - landinggoal_pos_(2)) < landing_threshold &&
+                abs(vel_(0) - landinggoal_pos_(0)) < 10*landing_threshold &&
+                abs(vel_(2) - landinggoal_pos_(2)) < 10*landing_threshold &&
+                abs(orient_optitrack(1) - landing_angle) < 0.05) {
 //            landed = true;
-            emergency_landing = true;
+                emergency_landing = true;
+            }
+        }
+        else {
+            if (abs(pos_(0) - landinggoal_pos_(0)) < 0.15 &&
+                abs(pos_(2) - landinggoal_pos_(2)) < 0.15 &&
+                abs(vel_(0) - landinggoal_pos_(0)) < 1.5 &&
+                abs(vel_(2) - landinggoal_pos_(2)) < 1.5 &&
+                abs(angle(1) - landing_angle) < 0.05) {
+//            landed = true;
+                emergency_landing = true;
+            }
         }
     }
 
@@ -96,7 +108,7 @@ public:
             control_clip.pwm = clip(network_output[0], -1, 1);
             control_clip.theta = clip(network_output[1], -1, 1);
 
-            control.pwm = hover_PWM + control_clip.pwm * pwm_from_hover;
+            control.pwm = hover_PWM + control_clip.pwm*pwm_from_hover;
             control.phi = 0;
             control.theta = control_clip.theta * 30;
         }
@@ -120,8 +132,13 @@ public:
 
     std::vector<float> Create_Network_Output_landing(torch::Device cuda) {
         // Very important to lead the input torch tensor to the CUDA device
-        inputs_landing.emplace_back(torch::tensor({{pos_(0), pos_(2), vel_(0),
-                                                    vel_(2), orient_optitrack(1)}}).to(cuda));
+        if (!onboard_angles) {
+            inputs_landing.emplace_back(torch::tensor({{pos_(0), pos_(2), vel_(0),
+                                                               vel_(2), orient_optitrack(1)}}).to(cuda));
+        } else {
+            inputs_landing.emplace_back(torch::tensor({{pos_(0), pos_(2), vel_(0),
+                                                               vel_(2), angle(1)}}).to(cuda));
+        }
         // Use the forward function to get the policy output in an Ivalue object
         auto output_landing = module_landing.forward(inputs_landing);
         // Must convert Ivalue to a Tuple and then to a Tensor before processing to Float
@@ -138,10 +155,17 @@ public:
 
     std::vector<float> Create_Network_Output_setpoint(torch::Device cuda) {
         // Very important to lead the input torch tensor to the CUDA device
-        inputs_setpoint.emplace_back(torch::tensor({{pos_(0), pos_(1),
-                                                            pos_(2), vel_(0), vel_(1),
-                                                            vel_(2), orient_optitrack(0),
-                                                            orient_optitrack(1)}}).to(cuda));
+        if (!onboard_angles) {
+            inputs_setpoint.emplace_back(torch::tensor({{pos_(0), pos_(1),
+                                                                pos_(2), vel_(0), vel_(1),
+                                                                vel_(2), orient_optitrack(0),
+                                                                orient_optitrack(1)}}).to(cuda));
+        } else {
+            inputs_setpoint.emplace_back(torch::tensor({{pos_(0), pos_(1),
+                                                                pos_(2), vel_(0), vel_(1),
+                                                                vel_(2), angle(0),
+                                                                angle(1)}}).to(cuda));
+        }
 
         // Use the forward function to get the policy output in an Ivalue object
         auto output_setpoint = module_setpoint.forward(inputs_setpoint);

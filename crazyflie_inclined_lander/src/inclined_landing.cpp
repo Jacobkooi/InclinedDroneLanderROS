@@ -19,7 +19,7 @@ Inclined_Landing::Inclined_Landing(ros::NodeHandle nh): nh_(nh)
     landinggoal_vel_.setZero();
     orient_optitrack.setZero();
     angle.setZero();
-    hover_PWM = 43504;  // ForcetoPWM_forster(9.81*0.03215) Check weight of crazyflie!!
+    hover_PWM = 48000;  // ForcetoPWM_forster(9.81*0.03215) Check weight of crazyflie!!
     landing_pwm = 37500;
     landed_pwm = 12000;
     control.theta = 0;
@@ -29,10 +29,18 @@ Inclined_Landing::Inclined_Landing(ros::NodeHandle nh): nh_(nh)
     control_clip.pwm = 0;
     emergency_landing = false;
     inclined_landing = false;
-    x_offset = 0;
+    landed = false;
+    x_offset = -0.7;
     y_offset = 0;
     z_offset = 0;
+    landinggoal_pos_(0) = 0;
+    landinggoal_pos_(2) = 1.25;
+    landinggoal_vel_(0) = 0;
+    landinggoal_vel_(2) = 0;
     pi = 3.1416;
+    landing_angle = -pi/7;
+
+    onboard_angles = false;
 
     time_stamp_ = ros::Time::now();
     time_stamp_previous_ = ros::Time::now();
@@ -58,7 +66,7 @@ void Inclined_Landing::initializePublishers()
 void Inclined_Landing::subscriberCallback_pos(const bebop2_msgs::FullStateWithCovarianceStamped &msg)
 {
     // get measured position
-    pos_(0) = msg.state.x +object_offset + x_offset;
+    pos_(0) = msg.state.x + x_offset;
     pos_(1) = msg.state.y + y_offset;
     pos_(2) = msg.state.z + z_offset;
 
@@ -79,25 +87,27 @@ void Inclined_Landing::subscriberCallback_pos(const bebop2_msgs::FullStateWithCo
     time_stamp_previous_ = time_stamp_;
 
     if (inclined_landing) {
-        Check_Succesfull_Landing();
+//        Check_Succesfull_Landing();
     }
 }
 
 // Callback if using the onboard orientation estimates
 void Inclined_Landing::subscriberCallback_cf(const geometry_msgs::PoseStamped &msg)
 {
-    // get measured position
-    quat.x = msg.pose.orientation.x;
-    quat.y = msg.pose.orientation.y;
-    quat.z = msg.pose.orientation.z;
-    quat.w = msg.pose.orientation.w;
-    // convert the quaternions to euler angles, angle(0) = roll, angle(1) = pitch, angle(2) = yaw
-    ToEulerAngles(quat);
-    angle(0) *= -1; // We train with roll angle to the left, but onboard angles have roll angle to the right.
-    // current time stamp of the message
-    time_stamp_      = msg.header.stamp;
-    // time difference. If using the node_rate to derive, then comment the following lines
-    dt_ = (time_stamp_ - time_stamp_previous_).toSec();
-    // set time
-    time_stamp_previous_ = time_stamp_;
+    if (onboard_angles) {
+        // get measured position
+        quat.x = msg.pose.orientation.x;
+        quat.y = msg.pose.orientation.y;
+        quat.z = msg.pose.orientation.z;
+        quat.w = msg.pose.orientation.w;
+        // convert the quaternions to euler angles, angle(0) = roll, angle(1) = pitch, angle(2) = yaw
+        ToEulerAngles(quat);
+        angle(0) *= -1; // We train with roll angle to the left, but onboard angles have roll angle to the right.
+        // current time stamp of the message
+        time_stamp_ = msg.header.stamp;
+        // time difference. If using the node_rate to derive, then comment the following lines
+        dt_ = (time_stamp_ - time_stamp_previous_).toSec();
+        // set time
+        time_stamp_previous_ = time_stamp_;
+    }
 }

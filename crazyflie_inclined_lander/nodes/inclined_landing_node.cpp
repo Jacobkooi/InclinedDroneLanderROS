@@ -28,21 +28,13 @@ int main(int argc, char **argv)
     double test_time = 15;
     double landing_time = 0.5;
     double total_time = test_time + landing_time + start_time;
-    networknode.inclined_landing = false;
-    networknode.landed = false;
-    // We compare the landinggoal with the position the drone 'thinks' it has, so not with the actual Kalman Filter
-    // coordinates before the coordinate offset (which is used for navigation and higher landing etc.
-    networknode.landing_angle = -networknode.pi/7;
-    networknode.landinggoal_pos_(0) = 0;
-    networknode.landinggoal_pos_(2) = 1.25;
-    networknode.landinggoal_vel_(0) = 0;
-    networknode.landinggoal_vel_(2) = 0;
-    networknode.x_offset = 0;
-    networknode.object_offset = 0;
+    networknode.onboard_angles = true;
+    networknode.landing_threshold = 0.15;
 
     // Load the torchscript modules. Always load a GPU model and use Cuda 11.0 Libtorch / Cudnn
     // Load the 2D policy network for inclined landing
-    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_17000_3miltimesteps_0015noise_6obs_FIRST_RESULTS.pt");
+    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/Torch_short_trainingPPOCF_2d_novertical_1229920Timesteps17500PWMfromHover0DR0.002noisestate_dict.pt");
+//    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_17000_3miltimesteps_0015noise_6obs_FIRST_RESULTS.pt");
     // Load the 3D policy network for set-point tracking
     networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_Euclidean_1000000_timesteps.pt");
 
@@ -57,24 +49,24 @@ int main(int argc, char **argv)
         if (networknode.pos_.x() >= 3.6 || networknode.pos_.x() <= -3.6 || networknode.pos_.y() >= 2.4 || networknode.pos_.z() >= 2.2){
             networknode.emergency_landing = true;
         }
-
-         // Approaching from the left
-//        if (dt >= 7){
-//            networknode.x_offset = 1.5;
-//            networknode.z_offset = -0.6;
-//        }
        //  Approaching from the right
-        if (dt >= 7){
-            networknode.x_offset = 1.5;
-            networknode.z_offset = -0.6;
+        if (dt >= 8){
+            networknode.x_offset = -1.5;
+            networknode.z_offset = -0.5;
         }
 
-        // Landing manoeuvre
-        if (dt >= 10){
+        if (dt >= 11){
             networknode.x_offset = 0;
             networknode.z_offset = 0;
             networknode.inclined_landing = true;
         }
+
+        // Landing manoeuvre
+//        if (dt >= 10){
+//            networknode.x_offset = 0;
+//            networknode.z_offset = 0;
+//            networknode.inclined_landing = true;
+//        }
 
         std::vector<float> output_vector_landing;
         std::vector<float> output_vector_setpoint;
@@ -96,13 +88,13 @@ int main(int argc, char **argv)
 //            networknode.Check_Succesfull_Landing();
 
         } else{
-           networknode.ToControlInput_pwmfromhover_3d(output_vector_setpoint, 16500);
+           networknode.ToControlInput_pwmfromhover_3d(output_vector_setpoint, 13500);
         }
 
         // And finally publish the control outputs, linear.x = pitch, linear.y = roll, linear.z = PWM, angular.z = yawdot
         geometry_msgs::Twist msg;
         msg.linear.x = networknode.control.theta;
-        msg.linear.y =-networknode.control.phi;  // Negative if using optitrack orientations, positive if using onboard angles
+        msg.linear.y = -networknode.control.phi;  // Negative for the onboard controller, which takes +phi to the right
         msg.linear.z = networknode.control.pwm;
         msg.angular.x = 0;
         msg.angular.y = 0;
