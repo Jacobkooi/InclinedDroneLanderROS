@@ -1,0 +1,13 @@
+<launch>
+
+  	<node 	pkg="crazyflie_inclined_lander"
+    		type="inclined_landing_node"
+		output="screen"
+    		name="inclined_landing_node_1"
+    		respawn="false"
+    		launch-prefix=""
+    		required="true">
+		
+  	</node>
+
+</launch>
