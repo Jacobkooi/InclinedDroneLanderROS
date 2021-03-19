@@ -25,18 +25,20 @@ int main(int argc, char **argv)
     // Define control, start and landing times
     double dt = diffTime.toSec();
     double start_time = 3;
-    double test_time = 15;
+    double test_time = 14;
     double landing_time = 0.5;
     double total_time = test_time + landing_time + start_time;
     networknode.onboard_angles = true;
-    networknode.landing_threshold = 0.15;
+    networknode.landing_threshold = 0.10;
 
     // Load the torchscript modules. Always load a GPU model and use Cuda 11.0 Libtorch / Cudnn
     // Load the 2D policy network for inclined landing
-    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/Torch_short_trainingPPOCF_2d_novertical_1229920Timesteps17500PWMfromHover0DR0.002noisestate_dict.pt");
-//    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_17000_3miltimesteps_0015noise_6obs_FIRST_RESULTS.pt");
+    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_17000_3miltimesteps_0015noise_6obs_FIRST_RESULTS.pt");
+//    networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Deep_Inclined_Drone_Lander/Torchscript_models/97gammaweakmotor.pt");
+//    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Deep_Inclined_Drone_Lander/Torchscript_models/2dinclined_weakmotor_300000timesteps.pt");
+
     // Load the 3D policy network for set-point tracking
-    networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_Euclidean_1000000_timesteps.pt");
+     networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_Euclidean_1000000_timesteps.pt");
 
     std::vector<float> test1 = networknode.Create_Network_Output_landing(device);
     std::vector<float> test2 = networknode.Create_Network_Output_setpoint(device);
@@ -50,23 +52,16 @@ int main(int argc, char **argv)
             networknode.emergency_landing = true;
         }
        //  Approaching from the right
-        if (dt >= 8){
-            networknode.x_offset = -1.5;
-            networknode.z_offset = -0.5;
+        if (dt >= 7){
+            networknode.x_offset = 0;
+            networknode.z_offset = -0.8;
         }
-
         if (dt >= 11){
             networknode.x_offset = 0;
             networknode.z_offset = 0;
             networknode.inclined_landing = true;
         }
 
-        // Landing manoeuvre
-//        if (dt >= 10){
-//            networknode.x_offset = 0;
-//            networknode.z_offset = 0;
-//            networknode.inclined_landing = true;
-//        }
 
         std::vector<float> output_vector_landing;
         std::vector<float> output_vector_setpoint;
@@ -88,11 +83,21 @@ int main(int argc, char **argv)
 //            networknode.Check_Succesfull_Landing();
 
         } else{
-           networknode.ToControlInput_pwmfromhover_3d(output_vector_setpoint, 13500);
+           networknode.ToControlInput_pwmfromhover_3d(output_vector_setpoint, 14000);
         }
 
         // And finally publish the control outputs, linear.x = pitch, linear.y = roll, linear.z = PWM, angular.z = yawdot
         geometry_msgs::Twist msg;
+        bebop2_msgs::FullStateWithCovarianceStamped msg_2;
+        msg_2.state.x = networknode.pos_(0);
+        msg_2.state.y = networknode.pos_(1);
+        msg_2.state.z = networknode.pos_(2);
+        msg_2.state.roll = networknode.angle(0);
+        msg_2.state.pitch = networknode.angle(1);
+        msg_2.state.yaw = networknode.angle(2);
+        msg_2.state.pitch_dot = networknode.control.theta;
+        msg_2.state.yaw_dot = networknode.control.pwm;
+
         msg.linear.x = networknode.control.theta;
         msg.linear.y = -networknode.control.phi;  // Negative for the onboard controller, which takes +phi to the right
         msg.linear.z = networknode.control.pwm;
@@ -114,6 +119,7 @@ int main(int argc, char **argv)
         }
         // Publish the control output to /cf1/cmd_vel
         networknode.pub_.publish(msg);
+        networknode.pub_handig.publish(msg_2);
         ros::spinOnce();
         loop_rate.sleep();
         diffTime = ros::Time::now() - startTime;

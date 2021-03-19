@@ -19,9 +19,9 @@ Inclined_Landing::Inclined_Landing(ros::NodeHandle nh): nh_(nh)
     landinggoal_vel_.setZero();
     orient_optitrack.setZero();
     angle.setZero();
-    hover_PWM = 48000;  // ForcetoPWM_forster(9.81*0.03215) Check weight of crazyflie!!
-    landing_pwm = 37500;
-    landed_pwm = 12000;
+    hover_PWM = 48000; // 41971;  // ForcetoPWM_forster(9.81*0.03215) Check weight of crazyflie!!
+    landing_pwm = 10000;
+    landed_pwm = 10000;
     control.theta = 0;
     control.phi = 0;
     control.pwm = 0;
@@ -30,7 +30,7 @@ Inclined_Landing::Inclined_Landing(ros::NodeHandle nh): nh_(nh)
     emergency_landing = false;
     inclined_landing = false;
     landed = false;
-    x_offset = -0.7;
+    x_offset = -1.3;
     y_offset = 0;
     z_offset = 0;
     landinggoal_pos_(0) = 0;
@@ -60,6 +60,7 @@ void Inclined_Landing::initializePublishers()
 {
     ROS_INFO("Initializing publishers");
     pub_ = nh_.advertise<geometry_msgs::Twist>("/cf1/cmd_vel", 1, true);
+    pub_handig = nh_.advertise<bebop2_msgs::FullStateWithCovarianceStamped>("/cf1/handig", 1, true);
 }
 
 // Subscriber callback function for the Optitrack states
@@ -87,7 +88,7 @@ void Inclined_Landing::subscriberCallback_pos(const bebop2_msgs::FullStateWithCo
     time_stamp_previous_ = time_stamp_;
 
     if (inclined_landing) {
-//        Check_Succesfull_Landing();
+        Check_Succesfull_Landing();
     }
 }
 

@@ -38,6 +38,7 @@ public:
     };
 
     ros::Publisher      pub_;
+    ros::Publisher      pub_handig;
     Eigen::Vector3d     pos_;          // measured position information
     Eigen::Vector3d     vel_;
 
@@ -84,13 +85,13 @@ public:
             }
         }
         else {
-            if (abs(pos_(0) - landinggoal_pos_(0)) < 0.15 &&
-                abs(pos_(2) - landinggoal_pos_(2)) < 0.15 &&
-                abs(vel_(0) - landinggoal_pos_(0)) < 1.5 &&
-                abs(vel_(2) - landinggoal_pos_(2)) < 1.5 &&
+            if (abs(pos_(0) - landinggoal_pos_(0)) < 1.2*landing_threshold &&
+                abs(pos_(2) - landinggoal_pos_(2)) < 1.2*landing_threshold &&
+                abs(vel_(0) - landinggoal_pos_(0)) < 15*landing_threshold &&
+                abs(vel_(2) - landinggoal_pos_(2)) < 15*landing_threshold &&
                 abs(angle(1) - landing_angle) < 0.05) {
-//            landed = true;
-                emergency_landing = true;
+            landed = true;
+//                emergency_landing = true;
             }
         }
     }
