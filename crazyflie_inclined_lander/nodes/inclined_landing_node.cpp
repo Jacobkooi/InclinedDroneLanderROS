@@ -32,18 +32,15 @@ int main(int argc, char **argv)
     networknode.landing_threshold = 0.10;
 
     // Load the torchscript modules. Always load a GPU model and use Cuda 11.0 Libtorch / Cudnn
-    // Load the 2D policy network for inclined landing
-    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_17000_3miltimesteps_0015noise_6obs_FIRST_RESULTS.pt");
-//    networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Deep_Inclined_Drone_Lander/Torchscript_models/97gammaweakmotor.pt");
-//    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Deep_Inclined_Drone_Lander/Torchscript_models/2dinclined_weakmotor_300000timesteps.pt");
 
+    // Load the 2D policy network for inclined landing
+    networknode.module_landing = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/Landing.pt");
     // Load the 3D policy network for set-point tracking
-     networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/PPO_Euclidean_1000000_timesteps.pt");
+     networknode.module_setpoint = torch::jit::load("/home/jacob/PycharmProjects/Crazyflie_Torch/Torchscript_models/Setpoint.pt");
 
     std::vector<float> test1 = networknode.Create_Network_Output_landing(device);
     std::vector<float> test2 = networknode.Create_Network_Output_setpoint(device);
 
-    ///// QUAD WEIGHS 32.57 with rubber legs and glue!!! //////
     // Main loop that is ran with the loop rate
     while (ros::ok() && dt <= total_time)
     {
@@ -53,8 +50,8 @@ int main(int argc, char **argv)
         }
        //  Approaching from the right
         if (dt >= 7){
-            networknode.x_offset = 0;
-            networknode.z_offset = -0.8;
+            networknode.x_offset = -1.5;
+            networknode.z_offset = -0.6;
         }
         if (dt >= 11){
             networknode.x_offset = 0;

@@ -30,7 +30,7 @@ Inclined_Landing::Inclined_Landing(ros::NodeHandle nh): nh_(nh)
     emergency_landing = false;
     inclined_landing = false;
     landed = false;
-    x_offset = -1.3;
+    x_offset = 0;
     y_offset = 0;
     z_offset = 0;
     landinggoal_pos_(0) = 0;

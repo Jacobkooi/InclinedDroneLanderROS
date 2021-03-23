@@ -85,13 +85,13 @@ public:
             }
         }
         else {
-            if (abs(pos_(0) - landinggoal_pos_(0)) < 1.2*landing_threshold &&
-                abs(pos_(2) - landinggoal_pos_(2)) < 1.2*landing_threshold &&
+            if (abs(pos_(0) - landinggoal_pos_(0)) < 1*landing_threshold &&
+                abs(pos_(2) - landinggoal_pos_(2)) < 1*landing_threshold &&
                 abs(vel_(0) - landinggoal_pos_(0)) < 15*landing_threshold &&
                 abs(vel_(2) - landinggoal_pos_(2)) < 15*landing_threshold &&
                 abs(angle(1) - landing_angle) < 0.05) {
-            landed = true;
-//                emergency_landing = true;
+//            landed = true;
+                emergency_landing = true;
             }
         }
     }
